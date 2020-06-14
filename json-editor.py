@@ -10,8 +10,14 @@ class JsonEditorWindow(Gtk.Window):
         self.store = Gtk.TreeStore(str)
         a = self.store.append(None, row=['a'])
         self.store.append(a, row=['x'])
+        self.store.append(a, row=['y'])
 
-        self.treeview = Gtk.TreeView(model=self.store)
+        self.treeview = Gtk.TreeView(
+            enable_tree_lines=True,
+            headers_visible=False,
+            model=self.store,
+            reorderable=True,
+        )
         self.add(self.treeview)
 
         cellRenderer = Gtk.CellRendererText(editable=True)
