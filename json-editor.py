@@ -5,14 +5,24 @@ from gi.repository import Gtk
 
 class JsonEditorWindow(Gtk.Window):
     def __init__(self):
-        Gtk.Window.__init__(self, title="Hello World")
+        Gtk.Window.__init__(self, title="JSON Editor")
 
-        self.button = Gtk.Button(label="Click here")
-        self.button.connect("clicked", self.on_button_clicked)
-        self.add(self.button)
+        self.store = Gtk.TreeStore(str)
+        a = self.store.append(None, row=['a'])
+        self.store.append(a, row=['x'])
 
-    def on_button_clicked(self, widget):
-        print("Hello world")
+        self.treeview = Gtk.TreeView(model=self.store)
+        self.add(self.treeview)
+
+        cellRenderer = Gtk.CellRendererText(editable=True)
+        cellRenderer.connect("edited", self.on_field_edited)
+
+        column = Gtk.TreeViewColumn(None, cellRenderer, text=0)
+        self.treeview.append_column(column)
+
+    def on_field_edited(self, cellRenderer, path, new_text):
+        field_iter = self.store.get_iter(Gtk.TreePath(path))
+        self.store.set_value(field_iter, 0, new_text)
 
 
 win = JsonEditorWindow()
