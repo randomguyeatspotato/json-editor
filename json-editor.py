@@ -7,14 +7,14 @@ class JsonEditorWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="JSON Editor")
 
-        self.store = Gtk.TreeStore(str)
-        a = self.store.append(None, row=['a'])
-        self.store.append(a, row=['x'])
-        self.store.append(a, row=['y'])
+        self.store = Gtk.TreeStore(str, int)
+        a = self.store.append(None, row=['a', 0])
+        self.store.append(a, row=['x', 1])
+        self.store.append(a, row=['y', 2])
 
         self.treeview = Gtk.TreeView(
             enable_tree_lines=True,
-            headers_visible=False,
+            headers_visible=True,
             model=self.store,
             reorderable=True,
         )
@@ -23,8 +23,10 @@ class JsonEditorWindow(Gtk.Window):
         cellRenderer = Gtk.CellRendererText(editable=True)
         cellRenderer.connect("edited", self.on_field_edited)
 
-        column = Gtk.TreeViewColumn(None, cellRenderer, text=0)
-        self.treeview.append_column(column)
+        column1 = Gtk.TreeViewColumn("Tree", cellRenderer, text=0)
+        self.treeview.append_column(column1)
+        column2 = Gtk.TreeViewColumn("Value", cellRenderer, text=1)
+        self.treeview.append_column(column2)
 
     def on_field_edited(self, cellRenderer, path, new_text):
         field_iter = self.store.get_iter(Gtk.TreePath(path))
