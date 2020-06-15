@@ -28,10 +28,22 @@ class JsonEditorWindow(Gtk.Window):
         column2 = Gtk.TreeViewColumn("Value", cellRenderer, text=1)
         self.treeview.append_column(column2)
 
+        self.treeview.connect("key-press-event", self.key_pressed)
+
     def on_field_edited(self, cellRenderer, path, new_text):
         field_iter = self.store.get_iter(Gtk.TreePath(path))
         self.store.set_value(field_iter, 0, new_text)
 
+    def key_pressed(self, treeview, event):
+        self.treeview.expand_row(self.treeview.get_cursor()[0], False)
+        print("key pressed")
+        #if (block highlighted)
+            #if keyname == 'Tab':
+            #else keyname == 'Return':
+        #else
+        #highlight first block
+
+#self.dataTableTreeView.connect("key-press-event", self.onTreeNavigateKeyPress)
 
 win = JsonEditorWindow()
 win.connect("destroy", Gtk.main_quit)
