@@ -1,7 +1,7 @@
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 
 class JsonEditorWindow(Gtk.Window):
     def __init__(self):
@@ -35,15 +35,26 @@ class JsonEditorWindow(Gtk.Window):
         self.store.set_value(field_iter, 0, new_text)
 
     def key_pressed(self, treeview, event):
-        self.treeview.expand_row(self.treeview.get_cursor()[0], False)
-        print("key pressed")
+        key = Gdk.keyval_name(event.keyval)
+        cursor = self.treeview.get_cursor()[0]
+        iter = self.store.get_iter(cursor)
+
+        if key == "Right":
+            if self.treeview.row_expanded(cursor):
+                self.treeview.collapse_row(cursor)
+            else:
+                self.treeview.expand_row(cursor, False)
+        elif key == "i":
+            self.store.insert_before(None, iter, [' ', 0])
+        elif key == "o":
+            self.store.insert_after(None, iter, [' ', 0])
+        else:
+            print("key pressed", key)
         #if (block highlighted)
             #if keyname == 'Tab':
             #else keyname == 'Return':
         #else
         #highlight first block
-
-#self.dataTableTreeView.connect("key-press-event", self.onTreeNavigateKeyPress)
 
 win = JsonEditorWindow()
 win.connect("destroy", Gtk.main_quit)
