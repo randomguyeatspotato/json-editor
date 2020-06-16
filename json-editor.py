@@ -48,6 +48,8 @@ class JsonEditorWindow(Gtk.Window):
             self.store.insert_before(None, iter, [' ', 0])
         elif key == "o":
             self.store.insert_after(None, iter, [' ', 0])
+        elif key == "p":
+            self.store.prepend(iter, [' ', 0])
         else:
             print("key pressed", key)
         #if (block highlighted)
