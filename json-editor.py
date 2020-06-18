@@ -23,16 +23,24 @@ class JsonEditorWindow(Gtk.Window):
         cellRenderer = Gtk.CellRendererText(editable=True)
         cellRenderer.connect("edited", self.on_field_edited)
 
+        cellRenderer2 = Gtk.CellRendererText(editable=False)
+
         column1 = Gtk.TreeViewColumn("Tree", cellRenderer, text=0)
         self.treeview.append_column(column1)
-        column2 = Gtk.TreeViewColumn("Value", cellRenderer, text=1)
+        column2 = Gtk.TreeViewColumn("Value", cellRenderer2, text=1)
         self.treeview.append_column(column2)
 
+        self.treeview.connect("button-press-event", self.mouse_clicked)
         self.treeview.connect("key-press-event", self.key_pressed)
 
     def on_field_edited(self, cellRenderer, path, new_text):
         field_iter = self.store.get_iter(Gtk.TreePath(path))
         self.store.set_value(field_iter, 0, new_text)
+
+    def mouse_clicked(self, treeview, event):
+        print("mouse clicked")
+        for o in vars(event):
+            print(o)
 
     def key_pressed(self, treeview, event):
         key = Gdk.keyval_name(event.keyval)
