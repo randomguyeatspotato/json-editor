@@ -42,7 +42,7 @@ class JsonEditorWindow(Gtk.Window):
         print("mouse clicked")
         if event.button == 3:
             menu = Gtk.Menu()
-            menu.popup(None, None, None, None, event.button, event.time)
+            menu.popup_at_pointer(event)
 
     def key_pressed(self, treeview, event):
         key = Gdk.keyval_name(event.keyval)
