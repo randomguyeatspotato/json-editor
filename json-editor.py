@@ -13,6 +13,7 @@ class JsonEditorWindow(Gtk.Window):
         self.store.append(a, row=['y', 2])
 
         self.treeview = Gtk.TreeView(
+            enable_search=False,
             enable_tree_lines=True,
             headers_visible=True,
             model=self.store,
