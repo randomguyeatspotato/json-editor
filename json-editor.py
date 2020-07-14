@@ -119,14 +119,15 @@ class EditValueWindow(Gtk.Dialog):
 
     def get_node_value(self):
         type = self.get_node_type()
+        child = self.value_stack.get_visible_child()
         if type == "Null":
             return TreeValue(None)
         elif type == "Boolean":
-            return TreeValue(False)
+            return TreeValue([False, True][child.get_active()])
         elif type == "Number":
             return TreeValue(0)
         elif type == "String":
-            return TreeValue('"' + "" + '"')
+            return TreeValue(child.get_text())
         elif type == "Array":
             return TreeValue([])
         elif type == "Object":
