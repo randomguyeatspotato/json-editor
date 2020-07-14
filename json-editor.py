@@ -413,7 +413,13 @@ class JsonEditorWindow(Gtk.Window):
             path.down()
             store.new_node(self, path)
         elif key == "e":
-            print(store.export())
+            tree = store.export()
+            file_chooser = Gtk.FileChooserDialog("Save As", self, Gtk.FileChooserAction.SAVE)
+            file_chooser.add_button(Gtk.STOCK_OK, Gtk.ResponseType.OK)
+            response = file_chooser.run()
+            with open(file_chooser.get_filename(), 'w') as json_file:
+                json.dump(tree, json_file)
+            file_chooser.destroy()
         else:
             print("key pressed", key)
         #if (block highlighted)
