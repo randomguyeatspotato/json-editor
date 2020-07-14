@@ -15,16 +15,15 @@ json_types = {
     "Array": list,
     "Object": dict}
 
-print(type(""))
-print(type(''))
-
-class TreeValue (GObject.GObject):
+class TreeValue(GObject.GObject):
     def __init__(self, value):
         GObject.GObject.__init__(self)
         self.value = value
 
     def get_value(self):
         return self.value
+
+GObject.type_register(TreeValue)
 
 class EditValueWindow(Gtk.Dialog):
     def __init__(self, parent, parent_type):
@@ -118,8 +117,20 @@ class EditValueWindow(Gtk.Dialog):
         iter = model.iter_nth_child(None, index)
         return model.get_value(iter, 0)
 
-    def get_node_value():
-        return ""
+    def get_node_value(self):
+        type = self.get_node_type()
+        if type == "Null":
+            return TreeValue(None)
+        elif type == "Boolean":
+            return TreeValue(False)
+        elif type == "Number":
+            return TreeValue(0)
+        elif type == "String":
+            return TreeValue('"' + "" + '"')
+        elif type == "Array":
+            return TreeValue([])
+        elif type == "Object":
+            return TreeValue({})
 
     def to_string(self):
         string = ""
@@ -165,8 +176,6 @@ class EditValueWindow(Gtk.Dialog):
         #   else:
         #       o =
 
-GObject.type_register(TreeValue)
-
 def test_path(model, path):
     if not path.up():
         return False, False
@@ -211,8 +220,7 @@ class JsonTreeStore(Gtk.TreeStore):
             self.set_value(iter, 0, edit_window.get_node_key())
             self.set_value(iter, 1, edit_window.get_node_type())
             self.set_value(iter, 2, edit_window.to_string())
-            self.set_value(iter, 3, TreeValue(5))
-            print(self[iter][3].get_value())
+            self.set_value(iter, 3, edit_window.get_node_value())
         edit_window.destroy()
 
     def new_node(self, window, path):
@@ -227,6 +235,27 @@ class JsonTreeStore(Gtk.TreeStore):
 
         self.insert(parent_iter, index)
         self.edit_node(window, path)
+
+    def export_node(self, iter):
+        type = self[iter][1]
+        if type == "Array":
+            array = []
+            for i in range(0, self.iter_n_children(iter)):
+                array.append(self.export_node(self.iter_nth_child(iter, i)))
+            return array
+        elif type == "Object":
+            object = {}
+            for i in range(0, self.iter_n_children(iter)):
+                child_iter = self.iter_nth_child(iter, i)
+                key = self[child_iter][0]
+                object[key] = self.export_node(child_iter)
+            return object
+        else:
+            return self[iter][3].get_value()
+
+    def export(self):
+        iter = self.get_iter(Gtk.TreePath())
+        return self.export_node(iter)
 
 class JsonEditorWindow(Gtk.Window):
 
@@ -281,7 +310,8 @@ class JsonEditorWindow(Gtk.Window):
         self.set_default_size(800, 600)
 
         self.store = JsonTreeStore(str, str, str, TreeValue.__gtype__)
-        a = self.store.append(None, row=['a', 'string', 'hello', TreeValue(5)])
+        self.store.append(None)
+        self.store.edit_node(self, Gtk.TreePath())
 
         self.treeview = Gtk.TreeView(
             enable_search=False,
@@ -381,6 +411,8 @@ class JsonEditorWindow(Gtk.Window):
         elif key == "p":
             path.down()
             store.new_node(self, path)
+        elif key == "e":
+            print(store.export())
         else:
             print("key pressed", key)
         #if (block highlighted)
