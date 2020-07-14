@@ -2,39 +2,9 @@ import gi
 import json
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk, Gdk, GObject
 
-def test_path(model, path):
-    if not path.up():
-        return False, False
-    if path.get_depth() == 0:
-        return False, False
-
-    iter = model.get_iter(path)
-    type = model.get_value(iter, 1)
-
-    if type == "Array":
-        possible = True
-        key = True
-    elif type == "Object":
-        possible = True
-        key = True
-    else:
-        possible = False
-        key = False
-    return possible, key
-
-class JsonTreeStore(Gtk.TreeStore):
-
-    def do_row_drop_possible(self, dest_path, selection_data):
-        valid, model, path = Gtk.tree_get_row_drag_data(selection_data)
-        path = dest_path.copy()
-        possible, key = test_path(model, path)
-        #add popup for key/no key
-        return possible
-
-root = {'first': 1, 'second': "hello"}
-
+#root = {'first': 1, 'second': "hello"}
 #print(json.dumps(root))
 
 json_types = {
@@ -44,6 +14,17 @@ json_types = {
     "String": str,
     "Array": list,
     "Object": dict}
+
+print(type(""))
+print(type(''))
+
+class TreeValue (GObject.GObject):
+    def __init__(self, value):
+        GObject.GObject.__init__(self)
+        self.value = value
+
+    def get_value(self):
+        return self.value
 
 class EditValueWindow(Gtk.Dialog):
     def __init__(self, parent, parent_type):
@@ -84,7 +65,6 @@ class EditValueWindow(Gtk.Dialog):
         null_page = Gtk.Label()
         null_page.set_text("null")
         value_stack.add_titled(null_page, "Null", "Null")
-
 
         boolean_store = Gtk.ListStore(str)
         boolean_store.append(["false"])
@@ -185,6 +165,68 @@ class EditValueWindow(Gtk.Dialog):
         #   else:
         #       o =
 
+GObject.type_register(TreeValue)
+
+def test_path(model, path):
+    if not path.up():
+        return False, False
+    if path.get_depth() == 0:
+        return False, False
+
+    iter = model.get_iter(path)
+    type = model.get_value(iter, 1)
+
+    if type == "Array":
+        possible = True
+        key = False
+    elif type == "Object":
+        possible = True
+        key = True
+    else:
+        possible = False
+        key = False
+    return possible, key
+
+class JsonTreeStore(Gtk.TreeStore):
+    def do_row_drop_possible(self, dest_path, selection_data):
+        valid, model, path = Gtk.tree_get_row_drag_data(selection_data)
+        path = dest_path.copy()
+        possible, key = test_path(model, path)
+        #add popup for key/no key
+        return possible
+
+    def edit_node(self, window, path):
+        possible, key = test_path(self, path.copy())
+        parent_type = ""
+        if possible:
+            if key:
+                parent_type = "Object"
+            else:
+                parent_type = "Array"
+
+        edit_window = EditValueWindow(parent = window, parent_type = parent_type)
+        response = edit_window.run()
+        if response == Gtk.ResponseType.OK:
+            iter = self.get_iter(path)
+            self.set_value(iter, 0, edit_window.get_node_key())
+            self.set_value(iter, 1, edit_window.get_node_type())
+            self.set_value(iter, 2, edit_window.to_string())
+            self.set_value(iter, 3, TreeValue(5))
+            print(self[iter][3].get_value())
+        edit_window.destroy()
+
+    def new_node(self, window, path):
+        possible, key = test_path(self, path.copy())
+        if not possible:
+            return
+
+        index = path.get_indices()[path.get_depth()-1]
+        parent_path = path.copy()
+        parent_path.up()
+        parent_iter = self.get_iter(parent_path)
+
+        self.insert(parent_iter, index)
+        self.edit_node(window, path)
 
 class JsonEditorWindow(Gtk.Window):
 
@@ -232,11 +274,14 @@ class JsonEditorWindow(Gtk.Window):
 #            context.finish(True, True, etime)
 #        return
 
+
     def __init__(self):
         Gtk.Window.__init__(self, title="JSON Editor")
 
-        self.store = JsonTreeStore(str, str, str)
-        a = self.store.append(None, row=['a', 'string', 'hello'])
+        self.set_default_size(800, 600)
+
+        self.store = JsonTreeStore(str, str, str, TreeValue.__gtype__)
+        a = self.store.append(None, row=['a', 'string', 'hello', TreeValue(5)])
 
         self.treeview = Gtk.TreeView(
             enable_search=False,
@@ -265,37 +310,19 @@ class JsonEditorWindow(Gtk.Window):
 
     def mouse_clicked(self, treeview, event):
         button = event.button
-        path = treeview.get_path_at_pos(event.x, event.y)[0]
+        p = treeview.get_path_at_pos(event.x, event.y)
+        if p == None:
+            return
+        path = p[0]
         store = self.store
         model = treeview.get_model()
-        iter = model.get_iter(path)
 
         if button == 1:
             #GDK_2BUTTON_PRESS = 5 find the actual reference
             if event.type == 5:
-                possible, key = test_path(model, path)
-                #if path.get_depth() == 1:
-                #    print("root")
-                #    parent_type = "Array"
-                parent_type = ""
-                if possible:
-                    if key:
-                        parent_type = "Object"
-                    else:
-                        parent_type = "Array"
-                else:
-                    parent_type = None
-
-                edit_window = EditValueWindow(parent = self, parent_type = parent_type)
-                response = edit_window.run()
-                if response == Gtk.ResponseType.OK:
-                    store.set_value(iter, 0, edit_window.get_node_key())
-                    store.set_value(iter, 1, edit_window.get_node_type())
-                    store.set_value(iter, 2, edit_window.to_string())
-                edit_window.destroy()
+                store.edit_node(self, path)
         elif button == 3:
-            store = store
-
+            window = self
             path_copy = path.copy()
             siblings, sibling_keys = test_path(model, path_copy)
             child_path = path.copy()
@@ -303,27 +330,33 @@ class JsonEditorWindow(Gtk.Window):
             child, child_key = test_path(model, child_path)
 
             menu = Gtk.Menu()
+
             insert_item = Gtk.MenuItem.new_with_label("Insert")
             insert_item.show()
             insert_item.set_sensitive(siblings)
             def insert(self):
-                store.insert_before(None, iter, [' ', ' ', 'new'])
+                store.new_node(window, path)
             insert_item.connect("activate", insert)
             menu.attach(insert_item, 0, 1, 0, 1)
+
             append_item = Gtk.MenuItem.new_with_label("Apend")
             append_item.show()
             append_item.set_sensitive(siblings)
             def append(self):
-                store.insert_after(None, iter, [' ', ' ', 'new'])
+                path.next()
+                store.new_node(window, path)
             append_item.connect("activate", append)
             menu.attach(append_item, 0, 1, 1, 2)
+
             insert_child_item = Gtk.MenuItem.new_with_label("Insert Child")
             insert_child_item.show()
             insert_child_item.set_sensitive(child)
             def insert_child(self):
-                store.prepend(iter, [' ', ' ', 'new'])
+                path.down()
+                store.new_node(window, path)
             insert_child_item.connect("activate", insert_child)
             menu.attach(insert_child_item, 0, 1, 2, 3)
+
             menu.popup_at_pointer(event)
 
         #previous_curosor = cursor
@@ -332,14 +365,8 @@ class JsonEditorWindow(Gtk.Window):
     def key_pressed(self, treeview, event):
         key = Gdk.keyval_name(event.keyval)
         path = self.treeview.get_cursor()[0]
-        iter = self.store.get_iter(path)
-        #print(cursor, cursor.get_indices())
-
-        path_copy = path.copy()
-        siblings, sibling_keys = test_path(self.treeview.get_model(), path_copy)
-        child_path = path.copy()
-        child_path.down()
-        child, child_key = test_path(self.treeview.get_model(), child_path)
+        store = self.store
+        iter = store.get_iter(path)
 
         if key == "Right":
             if self.treeview.row_expanded(path):
@@ -347,14 +374,13 @@ class JsonEditorWindow(Gtk.Window):
             else:
                 self.treeview.expand_row(path, False)
         elif key == "i":
-            if siblings:
-                self.store.insert_before(None, iter, [' ', ' ', 'new'])
+            store.new_node(self, path)
         elif key == "o":
-            if siblings:
-                self.store.insert_after(None, iter, [' ', ' ', 'new'])
+            path.next()
+            store.new_node(self, path)
         elif key == "p":
-            if child:
-                self.store.prepend(iter, [' ', ' ', 'new'])
+            path.down()
+            store.new_node(self, path)
         else:
             print("key pressed", key)
         #if (block highlighted)
