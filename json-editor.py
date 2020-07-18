@@ -5,13 +5,14 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GObject
 
-json_types = {
-    "Null": type(None),
-    "Boolean": bool,
-    "Number": int,
-    "String": str,
-    "Array": list,
-    "Object": dict}
+json_types = [
+    "Null",
+    "Boolean",
+    "Number",
+    "String",
+    "Array",
+    "Object"
+    ]
 
 class TreeValue(GObject.GObject):
     def __init__(self, value):
@@ -22,6 +23,29 @@ class TreeValue(GObject.GObject):
         return self.value
 
 GObject.type_register(TreeValue)
+
+class TreeNode(GObject.GObject):
+    def __init__(self, key, value):
+        GObject.GObject.__init__(self)
+        self.key = key
+        self.value = value
+
+    def get_key(self):
+        return self.key
+
+    def get_value(self):
+        return self.value
+
+    def get_string(self):
+        string = ""
+        if type(self.key) == str:
+            string += '"' + self.key + '": '
+
+        string += json.dumps(self.value)
+
+        return string
+
+GObject.type_register(TreeNode)
 
 class EditValueWindow(Gtk.Dialog):
     def __init__(self, parent, parent_type):
@@ -166,6 +190,37 @@ class EditValueWindow(Gtk.Dialog):
         elif type == "Object":
             return TreeValue({})
 
+    def get_node(self):
+        key = None
+        if hasattr(self, 'key'):
+            key = self.key.get_text()
+        type = self.get_node_type()
+        child = self.value_stack.get_visible_child()
+        if type == "Null":
+            return TreeNode(key, None)
+        elif type == "Boolean":
+            return TreeNode(key, [False, True][child.get_active()])
+        elif type == "Number":
+            number_string = child.get_text()
+            varifiacation = r'[-]?\d+($|[.]\d+($|[eE][+-]?\d+$))'
+            if not re.match(varifiacation, number_string):
+                number_string += "0"
+            pattern = "[.eE]"
+            #print(re.search("b", "abc"))
+            #print(number_string, re.search(pattern, number_string))
+            if re.search(pattern, number_string):
+                n = float(number_string)
+            else:
+                n = int(number_string)
+            print(n)
+            return TreeNode(key, n)
+        elif type == "String":
+            return TreeNode(key, child.get_text())
+        elif type == "Array":
+            return TreeNode(key, [])
+        elif type == "Object":
+            return TreeNode(key, {})
+
     def to_string(self):
         string = ""
         if hasattr(self, 'key'):
@@ -255,6 +310,8 @@ class JsonTreeStore(Gtk.TreeStore):
             self.set_value(iter, 1, edit_window.get_node_type())
             self.set_value(iter, 2, edit_window.to_string())
             self.set_value(iter, 3, edit_window.get_node_value())
+            print(edit_window.get_node())
+            self.set_value(iter, 4, edit_window.get_node())
         edit_window.destroy()
 
     def new_node(self, window, path):
@@ -343,7 +400,7 @@ class JsonEditorWindow(Gtk.Window):
 
         self.set_default_size(800, 600)
 
-        self.store = JsonTreeStore(str, str, str, TreeValue.__gtype__)
+        self.store = JsonTreeStore(str, str, str, TreeValue.__gtype__,  TreeNode.__gtype__)
         self.store.append(None)
         self.store.edit_node(self, Gtk.TreePath())
 
@@ -357,8 +414,10 @@ class JsonEditorWindow(Gtk.Window):
         self.add(self.treeview)
 
         cellRenderer = Gtk.CellRendererText(editable=False)
-        cellRenderer.connect("edited", self.on_field_edited)
-        column = Gtk.TreeViewColumn(None, cellRenderer, text=2)
+        column = Gtk.TreeViewColumn(None, cellRenderer, text=4)
+        def f(column, cellRenderer, model, iter, x):
+            cellRenderer.set_property("text", model[iter][4].get_string())
+        column.set_cell_data_func(cellRenderer, f)
         self.treeview.append_column(column)
         self.treeview.connect("button-press-event", self.mouse_clicked)
         self.treeview.connect("key-press-event", self.key_pressed)
@@ -368,9 +427,6 @@ class JsonEditorWindow(Gtk.Window):
         #self.treeview.connect("drag_data_get", self.drag_data_get_data)
         #self.treeview.connect("drag_data_received", self.drag_data_received_data)
 
-    def on_field_edited(self, cellRenderer, path, new_text):
-        field_iter = self.store.get_iter(Gtk.TreePath(path))
-        self.store.set_value(field_iter, 0, new_text)
 
     def mouse_clicked(self, treeview, event):
         button = event.button
