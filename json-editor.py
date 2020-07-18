@@ -1,11 +1,9 @@
-import gi
 import json
+import re
+import gi
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GObject
-
-#root = {'first': 1, 'second': "hello"}
-#print(json.dumps(root))
 
 json_types = {
     "Null": type(None),
@@ -75,11 +73,32 @@ class EditValueWindow(Gtk.Dialog):
         value_stack.add_titled(boolean_select, "Boolean", "Boolean")
 
         c = Gtk.Entry()
-        c.set_text("Number")
+        context = c.get_style_context()
+        default_color = context.get_color(Gtk.StateFlags.NORMAL)
+        red_color = Gdk.RGBA(1, 0, 0, 1)
+        #print(Gtk.InputPurpose.NUMBER)
+        #c.set_input_purpose(Gtk.InputPurpose.NUMBER)
+        def on_insert(entry, text, length, position):
+            new_string = entry.get_text()
+            p = entry.props.cursor_position
+            new_string = new_string[:p] + text + new_string[p:]
+            pattern = r'^[-]?\d*($|[.]\d*($|[eE][+-]?\d*$))'
+            if not re.match(pattern, new_string):
+                entry.stop_emission_by_name("insert-text")
+                return True
+            else:
+                #varifiacation = r'[-]?\d+($|[.]\d+($|e[-]?\d+$))'
+                #if not re.match(varifiacation, new_string):
+                #    c.override_color(Gtk.StateFlags.NORMAL, red_color)
+                #    print("red color")
+                #else:
+                #    c.override_color(Gtk.StateFlags.NORMAL, default_color)
+                #    print("normal color")
+                return False
+        c.connect("insert-text", on_insert)
         value_stack.add_titled(c, "Number", "Number")
 
         d = Gtk.Entry()
-        d.set_text("String")
         value_stack.add_titled(d, "String", "String")
 
         array_page = Gtk.Label()
@@ -125,7 +144,19 @@ class EditValueWindow(Gtk.Dialog):
         elif type == "Boolean":
             return TreeValue([False, True][child.get_active()])
         elif type == "Number":
-            return TreeValue(0)
+            number_string = child.get_text()
+            varifiacation = r'[-]?\d+($|[.]\d+($|[eE][+-]?\d+$))'
+            if not re.match(varifiacation, number_string):
+                number_string += "0"
+            pattern = "[.eE]"
+            #print(re.search("b", "abc"))
+            #print(number_string, re.search(pattern, number_string))
+            if re.search(pattern, number_string):
+                n = float(number_string)
+            else:
+                n = int(number_string)
+            print(n)
+            return TreeValue(n)
         elif type == "String":
             return TreeValue(child.get_text())
         elif type == "Array":
