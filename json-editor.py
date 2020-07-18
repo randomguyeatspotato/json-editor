@@ -96,9 +96,11 @@ class EditValueWindow(Gtk.Dialog):
                 #    print("normal color")
                 return False
         c.connect("insert-text", on_insert)
+        c.set_placeholder_text("Number")
         value_stack.add_titled(c, "Number", "Number")
 
         d = Gtk.Entry()
+        d.set_placeholder_text("String")
         value_stack.add_titled(d, "String", "String")
 
         array_page = Gtk.Label()
