@@ -315,8 +315,7 @@ class JsonEditorWindow(Gtk.Window):
 
         #self.store = JsonTreeStore(str, str, str, TreeValue.__gtype__,  TreeNode.__gtype__)
         self.store = JsonTreeStore(TreeNode.__gtype__)
-        self.store.append(None)
-        self.store.edit_node(self, Gtk.TreePath())
+        self.store.import_tree(None)
 
         self.treeview = Gtk.TreeView(
             enable_search=False,
