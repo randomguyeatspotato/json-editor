@@ -157,7 +157,11 @@ class EditValueWindow(Gtk.Dialog):
         key = None
         if hasattr(self, 'key'):
             key = self.key.get_text()
-        type = self.get_node_type()
+        combo = self.type_select
+        tree_iter = combo.get_active_iter()
+        model = combo.get_model()
+        type = model[tree_iter][0]
+
         child = self.value_stack.get_visible_child()
         if type == "Null":
             return TreeNode(key, None)
@@ -240,6 +244,22 @@ class JsonTreeStore(Gtk.TreeStore):
         self.insert(parent_iter, index)
         self.edit_node(window, path)
 
+    def import_node(self, iter, key, tree):
+        type = get_json_type(tree)
+        if type == "Array":
+            new_iter = self.insert(iter, -1, row = [TreeNode(key, [])])
+            for child in tree:
+                self.import_node(new_iter, None, child)
+        elif type == "Object":
+            new_iter = self.insert(iter, -1, row = [TreeNode(key, {})])
+            for child_key, child in tree.items():
+                self.import_node(new_iter, child_key, child)
+        else:
+            self.insert(iter, -1, row = [TreeNode(key, tree)])
+
+    def import_tree(self, tree):
+        self.import_node(None, None, tree)
+
     def export_node(self, iter):
         node = self[iter][0]
         type = get_json_type(node.get_value())
@@ -258,7 +278,7 @@ class JsonTreeStore(Gtk.TreeStore):
         else:
             return node.get_value()
 
-    def export(self):
+    def export_tree(self):
         iter = self.get_iter(Gtk.TreePath())
         return self.export_node(iter)
 
@@ -418,8 +438,19 @@ class JsonEditorWindow(Gtk.Window):
         elif key == "p":
             path.down()
             store.new_node(self, path)
+        elif key == "r":
+            file_chooser = Gtk.FileChooserDialog("Open", self, Gtk.FileChooserAction.OPEN)
+            file_chooser.add_button(Gtk.STOCK_OK, Gtk.ResponseType.OK)
+            response = file_chooser.run()
+            with open(file_chooser.get_filename(), 'r') as json_file:
+                tree = json.loads(json_file.read())
+            file_chooser.destroy()
+            store = JsonTreeStore(TreeNode.__gtype__)
+            tree = store.import_tree(tree)
+            self.treeview.set_model(store)
+            self.store = store
         elif key == "e":
-            tree = store.export()
+            tree = store.export_tree()
             file_chooser = Gtk.FileChooserDialog("Save As", self, Gtk.FileChooserAction.SAVE)
             file_chooser.add_button(Gtk.STOCK_OK, Gtk.ResponseType.OK)
             response = file_chooser.run()
