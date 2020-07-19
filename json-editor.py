@@ -14,15 +14,18 @@ json_types = [
     "Object"
     ]
 
-class TreeValue(GObject.GObject):
-    def __init__(self, value):
-        GObject.GObject.__init__(self)
-        self.value = value
+py_to_json = {
+    r"<class 'NoneType'>": "Null",
+    r"<class 'bool'>": "Boolean",
+    r"<class 'int'>": "Number",
+    r"<class 'float'>": "Number",
+    r"<class 'str'>": "String",
+    r"<class 'list'>": "Array",
+    r"<class 'dict'>": "Object"
+}
 
-    def get_value(self):
-        return self.value
-
-GObject.type_register(TreeValue)
+def get_json_type(value):
+    return py_to_json[str(type(value))]
 
 class TreeNode(GObject.GObject):
     def __init__(self, key, value):
@@ -150,46 +153,6 @@ class EditValueWindow(Gtk.Dialog):
 
         self.value_stack.set_visible_child_name(type)
 
-    def get_node_key(self):
-        if hasattr(self, 'key'):
-            return self.key.get_text()
-        else:
-            return ""
-
-    def get_node_type(self):
-        index = self.type_select.get_active()
-        model = self.type_select.get_model()
-        iter = model.iter_nth_child(None, index)
-        return model.get_value(iter, 0)
-
-    def get_node_value(self):
-        type = self.get_node_type()
-        child = self.value_stack.get_visible_child()
-        if type == "Null":
-            return TreeValue(None)
-        elif type == "Boolean":
-            return TreeValue([False, True][child.get_active()])
-        elif type == "Number":
-            number_string = child.get_text()
-            varifiacation = r'[-]?\d+($|[.]\d+($|[eE][+-]?\d+$))'
-            if not re.match(varifiacation, number_string):
-                number_string += "0"
-            pattern = "[.eE]"
-            #print(re.search("b", "abc"))
-            #print(number_string, re.search(pattern, number_string))
-            if re.search(pattern, number_string):
-                n = float(number_string)
-            else:
-                n = int(number_string)
-            print(n)
-            return TreeValue(n)
-        elif type == "String":
-            return TreeValue(child.get_text())
-        elif type == "Array":
-            return TreeValue([])
-        elif type == "Object":
-            return TreeValue({})
-
     def get_node(self):
         key = None
         if hasattr(self, 'key'):
@@ -206,13 +169,10 @@ class EditValueWindow(Gtk.Dialog):
             if not re.match(varifiacation, number_string):
                 number_string += "0"
             pattern = "[.eE]"
-            #print(re.search("b", "abc"))
-            #print(number_string, re.search(pattern, number_string))
             if re.search(pattern, number_string):
                 n = float(number_string)
             else:
                 n = int(number_string)
-            print(n)
             return TreeNode(key, n)
         elif type == "String":
             return TreeNode(key, child.get_text())
@@ -221,50 +181,6 @@ class EditValueWindow(Gtk.Dialog):
         elif type == "Object":
             return TreeNode(key, {})
 
-    def to_string(self):
-        string = ""
-        if hasattr(self, 'key'):
-            string += self.get_node_key()
-            string += ": "
-
-        #type = self.get_nodetype()
-
-        child = self.value_stack.get_visible_child()
-        child_type = type(child)
-        if child_type == Gtk.Label:
-            string += child.get_text()
-        elif child_type == Gtk.ComboBox:
-            string += ["false", "true"][child.get_active()]
-        elif child_type == Gtk.Entry:
-            if self.get_node_type() == "String":
-                string += '"'
-                string += child.get_text()
-                string += '"'
-            else:
-                string += child.get_text()
-
-
-        return string
-
-        #def row_to_string(treestore, iter, parentiter, value)
-
-        #    k = treestore.get_value(iter, 0)
-        #    t = treestore.get_value(iter, 1)
-        #    ot = type(value)
-        #    if ot == list:
-        #        s = "[]"
-        #   elif ot == dict:
-        #       s = "{}"
-        #   else:
-        #       s = str(value)
-        #   pt = treestore.get_value(parentiter, 1)
-        #   if pt == list:
-        #       o = s
-        #   elif pt == dict:
-        #       o = '"' + k '": ' + s
-        #   else:
-        #       o =
-
 def test_path(model, path):
     if not path.up():
         return False, False
@@ -272,7 +188,9 @@ def test_path(model, path):
         return False, False
 
     iter = model.get_iter(path)
-    type = model.get_value(iter, 1)
+    #type = model.get_value(iter, 1)
+    node = model.get_value(iter, 0)
+    type = get_json_type(node.get_value())
 
     if type == "Array":
         possible = True
@@ -306,12 +224,7 @@ class JsonTreeStore(Gtk.TreeStore):
         response = edit_window.run()
         if response == Gtk.ResponseType.OK:
             iter = self.get_iter(path)
-            self.set_value(iter, 0, edit_window.get_node_key())
-            self.set_value(iter, 1, edit_window.get_node_type())
-            self.set_value(iter, 2, edit_window.to_string())
-            self.set_value(iter, 3, edit_window.get_node_value())
-            print(edit_window.get_node())
-            self.set_value(iter, 4, edit_window.get_node())
+            self.set_value(iter, 0, edit_window.get_node())
         edit_window.destroy()
 
     def new_node(self, window, path):
@@ -328,7 +241,8 @@ class JsonTreeStore(Gtk.TreeStore):
         self.edit_node(window, path)
 
     def export_node(self, iter):
-        type = self[iter][1]
+        node = self[iter][0]
+        type = get_json_type(node.get_value())
         if type == "Array":
             array = []
             for i in range(0, self.iter_n_children(iter)):
@@ -338,11 +252,11 @@ class JsonTreeStore(Gtk.TreeStore):
             object = {}
             for i in range(0, self.iter_n_children(iter)):
                 child_iter = self.iter_nth_child(iter, i)
-                key = self[child_iter][0]
+                key = self[child_iter][0].get_key()
                 object[key] = self.export_node(child_iter)
             return object
         else:
-            return self[iter][3].get_value()
+            return node.get_value()
 
     def export(self):
         iter = self.get_iter(Gtk.TreePath())
@@ -400,7 +314,8 @@ class JsonEditorWindow(Gtk.Window):
 
         self.set_default_size(800, 600)
 
-        self.store = JsonTreeStore(str, str, str, TreeValue.__gtype__,  TreeNode.__gtype__)
+        #self.store = JsonTreeStore(str, str, str, TreeValue.__gtype__,  TreeNode.__gtype__)
+        self.store = JsonTreeStore(TreeNode.__gtype__)
         self.store.append(None)
         self.store.edit_node(self, Gtk.TreePath())
 
@@ -414,9 +329,11 @@ class JsonEditorWindow(Gtk.Window):
         self.add(self.treeview)
 
         cellRenderer = Gtk.CellRendererText(editable=False)
-        column = Gtk.TreeViewColumn(None, cellRenderer, text=4)
+        #column = Gtk.TreeViewColumn(None, cellRenderer, text=4)
+        column = Gtk.TreeViewColumn(None, cellRenderer, text=0)
         def f(column, cellRenderer, model, iter, x):
-            cellRenderer.set_property("text", model[iter][4].get_string())
+            #cellRenderer.set_property("text", model[iter][4].get_string())
+            cellRenderer.set_property("text", model[iter][0].get_string())
         column.set_cell_data_func(cellRenderer, f)
         self.treeview.append_column(column)
         self.treeview.connect("button-press-event", self.mouse_clicked)
