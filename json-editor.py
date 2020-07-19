@@ -5,6 +5,8 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GObject
 
+from treenode import TreeNode
+
 json_types = [
     "Null",
     "Boolean",
@@ -26,29 +28,6 @@ py_to_json = {
 
 def get_json_type(value):
     return py_to_json[str(type(value))]
-
-class TreeNode(GObject.GObject):
-    def __init__(self, key, value):
-        GObject.GObject.__init__(self)
-        self.key = key
-        self.value = value
-
-    def get_key(self):
-        return self.key
-
-    def get_value(self):
-        return self.value
-
-    def get_string(self):
-        string = ""
-        if type(self.key) == str:
-            string += '"' + self.key + '": '
-
-        string += json.dumps(self.value)
-
-        return string
-
-GObject.type_register(TreeNode)
 
 class EditValueWindow(Gtk.Dialog):
     def __init__(self, parent, parent_type):
