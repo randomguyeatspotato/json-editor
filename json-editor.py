@@ -435,6 +435,9 @@ class JsonEditorWindow(Gtk.Window):
             with open(file_chooser.get_filename(), 'w') as json_file:
                 json.dump(tree, json_file)
             file_chooser.destroy()
+        elif key == "Delete":
+            if not path == Gtk.TreePath():
+                store.remove(iter)
         else:
             print("key pressed", key)
         #if (block highlighted)
