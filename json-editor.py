@@ -392,6 +392,16 @@ class JsonEditorWindow(Gtk.Window):
             insert_child_item.connect("activate", insert_child)
             menu.attach(insert_child_item, 0, 1, 2, 3)
 
+            delete_item = Gtk.MenuItem.new_with_label("Delete")
+            delete_item.show()
+            if path == Gtk.TreePath():
+                delete_item.set_sensitive(False)
+            def delete(self):
+                iter = store.get_iter(path)
+                store.remove(iter)
+            delete_item.connect("activate", delete)
+            menu.attach(delete_item, 0, 1, 3, 4)
+
             menu.popup_at_pointer(event)
 
         #previous_curosor = cursor
