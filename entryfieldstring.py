@@ -9,4 +9,4 @@ class EntryFieldString(Gtk.Entry):
         self.set_placeholder_text(convert(str))
 
     def get_value(self):
-        return child.get_text()
+        return self.get_text()

@@ -122,18 +122,7 @@ class EditValueWindow(Gtk.Dialog):
         type = model[tree_iter][0]
 
         child = self.value_stack.get_visible_child()
-        if type == "Null":
-            return TreeNode(key, None)
-        elif type == "Boolean":
-            return TreeNode(key, [False, True][child.get_active()])
-        elif type == "Number":
-            return TreeNode(key, child.get_value())
-        elif type == "String":
-            return TreeNode(key, child.get_value())
-        elif type == "Array":
-            return TreeNode(key, [])
-        elif type == "Object":
-            return TreeNode(key, {})
+        return TreeNode(key, child.get_value())
 
 def test_path(model, path):
     if not path.up():

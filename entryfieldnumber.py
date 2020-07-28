@@ -7,7 +7,6 @@ class EntryFieldNumber(Gtk.Entry):
     def __init__(self, convert):
         Gtk.Entry.__init__(self)
 
-        print(convert(float))
         self.set_placeholder_text(convert(float))
 
         def on_insert(entry, text, length, position):
