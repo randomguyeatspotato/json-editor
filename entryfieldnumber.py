@@ -2,12 +2,13 @@ import re
 import gi
 from gi.repository import Gtk
 
-print(float("1.e3"))
+class EntryFieldNumber(Gtk.Entry):
 
-class NumberEntry(Gtk.Entry):
-
-    def __init__(self):
+    def __init__(self, convert):
         Gtk.Entry.__init__(self)
+
+        print(convert(float))
+        self.set_placeholder_text(convert(float))
 
         def on_insert(entry, text, length, position):
             new_string = entry.get_text()
@@ -21,7 +22,7 @@ class NumberEntry(Gtk.Entry):
                 return False
         self.connect("insert-text", on_insert)
 
-    def get_number(self):
+    def get_value(self):
         number_string = self.get_text()
         varifiacation = r'[-]?\d+([.]\d*)?([eE][+-]?\d+)?$'
         if not re.match(varifiacation, number_string):

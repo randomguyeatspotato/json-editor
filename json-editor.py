@@ -6,7 +6,13 @@ from gi.repository import Gtk, Gdk
 
 from treenode import TreeNode
 
-from numberentry import NumberEntry
+from entryfieldnone import EntryFieldNone
+from entryfieldboolean import EntryFieldBoolean
+from entryfieldnumber import EntryFieldNumber
+from entryfieldstring import EntryFieldString
+from entryfieldlist import EntryFieldList
+from entryfielddictionary import EntryFieldDictionary
+
 
 json_types = [
     "Null",
@@ -29,6 +35,13 @@ py_to_json = {
 
 def get_json_type(value):
     return py_to_json[str(type(value))]
+
+TypeType = type(type(None))
+def to_json(value):
+    if type(value) == TypeType:
+        return py_to_json[str(value)]
+    else:
+        return json.dumps(value)
 
 class EditValueWindow(Gtk.Dialog):
     def __init__(self, parent, parent_type):
@@ -66,33 +79,22 @@ class EditValueWindow(Gtk.Dialog):
         self.value_stack = value_stack
         type_select.connect("changed", self.type_changed)
 
-        null_page = Gtk.Label()
-        null_page.set_text("null")
+        null_page = EntryFieldNone(to_json)
         value_stack.add_titled(null_page, "Null", "Null")
 
-        boolean_store = Gtk.ListStore(str)
-        boolean_store.append(["false"])
-        boolean_store.append(["true"])
-        boolean_select = Gtk.ComboBox.new_with_model_and_entry(boolean_store)
-        #boolean_select.connect("changed", )
-        boolean_select.set_entry_text_column(0)
-        boolean_select.set_active(0)
+        boolean_select = EntryFieldBoolean(to_json)
         value_stack.add_titled(boolean_select, "Boolean", "Boolean")
 
-        c = NumberEntry()
-        c.set_placeholder_text("Number")
+        c = EntryFieldNumber(to_json)
         value_stack.add_titled(c, "Number", "Number")
 
-        d = Gtk.Entry()
-        d.set_placeholder_text("String")
+        d = EntryFieldString(to_json)
         value_stack.add_titled(d, "String", "String")
 
-        array_page = Gtk.Label()
-        array_page.set_text("[ ]")
+        array_page = EntryFieldList(to_json)
         value_stack.add_titled(array_page, "Array", "Array")
 
-        object_page = Gtk.Label()
-        object_page.set_text("{ }")
+        object_page = EntryFieldDictionary(to_json)
         value_stack.add_titled(object_page, "Object", "Object")
 
         value_box = Gtk.VBox()
@@ -125,9 +127,9 @@ class EditValueWindow(Gtk.Dialog):
         elif type == "Boolean":
             return TreeNode(key, [False, True][child.get_active()])
         elif type == "Number":
-            return TreeNode(key, child.get_number())
+            return TreeNode(key, child.get_value())
         elif type == "String":
-            return TreeNode(key, child.get_text())
+            return TreeNode(key, child.get_value())
         elif type == "Array":
             return TreeNode(key, [])
         elif type == "Object":
