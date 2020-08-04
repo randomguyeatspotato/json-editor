@@ -32,6 +32,15 @@ py_to_json = {
     r"<class 'dict'>": "Object"
 }
 
+json_to_entry_field = {
+    "Null": EntryFieldNone,
+    "Boolean": EntryFieldBoolean,
+    "Number": EntryFieldNumber,
+    "String": EntryFieldString,
+    "Array": EntryFieldList,
+    "Object": EntryFieldDictionary
+}
+
 TypeType = type(type(None))
 def to_json(value):
     if type(value) == TypeType:
@@ -75,23 +84,9 @@ class EditValueWindow(Gtk.Dialog):
         self.value_stack = value_stack
         type_select.connect("changed", self.type_changed)
 
-        null_page = EntryFieldNone(to_json)
-        value_stack.add_titled(null_page, "Null", "Null")
-
-        boolean_select = EntryFieldBoolean(to_json)
-        value_stack.add_titled(boolean_select, "Boolean", "Boolean")
-
-        c = EntryFieldNumber(to_json)
-        value_stack.add_titled(c, "Number", "Number")
-
-        d = EntryFieldString(to_json)
-        value_stack.add_titled(d, "String", "String")
-
-        array_page = EntryFieldList(to_json)
-        value_stack.add_titled(array_page, "Array", "Array")
-
-        object_page = EntryFieldDictionary(to_json)
-        value_stack.add_titled(object_page, "Object", "Object")
+        for k, v in json_to_entry_field.items():
+            entry = v(to_json)
+            value_stack.add_titled(entry, k, k)
 
         value_box = Gtk.VBox()
         value_box.pack_start(Gtk.Label(label = "Value"), True, True, 0)
