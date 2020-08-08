@@ -17,5 +17,8 @@ class EntryFieldBoolean(Gtk.ComboBox):
         self.set_entry_text_column(0)
         self.set_active(0)
 
+    def set_value(self, value):
+        self.set_active(int(value))
+
     def get_value(self):
         return [False, True][self.get_active()]

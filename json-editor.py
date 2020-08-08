@@ -60,10 +60,11 @@ class JsonTreeStore(Gtk.TreeStore):
             else:
                 parent_type = "Array"
 
-        edit_window = EditValueWindow(parent = window, parent_type = parent_type)
+        iter = self.get_iter(path)
+        node = self[iter][0]
+        edit_window = EditValueWindow(parent = window, parent_type = parent_type, node = node)
         response = edit_window.run()
         if response == Gtk.ResponseType.OK:
-            iter = self.get_iter(path)
             self.set_value(iter, 0, edit_window.get_node())
         edit_window.destroy()
 
@@ -77,7 +78,7 @@ class JsonTreeStore(Gtk.TreeStore):
         parent_path.up()
         parent_iter = self.get_iter(parent_path)
 
-        self.insert(parent_iter, index)
+        self.insert(parent_iter, index, row = [TreeNode("", None)])
         self.edit_node(window, path)
 
     def import_node(self, iter, key, tree):

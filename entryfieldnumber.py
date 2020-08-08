@@ -21,6 +21,9 @@ class EntryFieldNumber(Gtk.Entry):
                 return False
         self.connect("insert-text", on_insert)
 
+    def set_value(self, value):
+        self.set_text(str(value))
+
     def get_value(self):
         number_string = self.get_text()
         varifiacation = r'[-]?\d+([.]\d*)?([eE][+-]?\d+)?$'

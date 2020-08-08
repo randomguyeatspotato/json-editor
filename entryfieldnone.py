@@ -7,5 +7,8 @@ class EntryFieldNone(Gtk.Label):
 
         self.set_text(convert(None))
 
+    def set_value(self, value):
+        pass
+
     def get_value(self):
         return None

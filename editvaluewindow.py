@@ -49,7 +49,7 @@ def to_json(value):
         return json.dumps(value)
 
 class EditValueWindow(Gtk.Dialog):
-    def __init__(self, parent, parent_type):
+    def __init__(self, parent, parent_type, node):
         Gtk.Dialog.__init__(self, "Edit Node", parent, modal = True)
 
         self.add_button("Cancel", Gtk.ResponseType.CANCEL)
@@ -68,25 +68,30 @@ class EditValueWindow(Gtk.Dialog):
             key_box.pack_start(key, True, True, 0)
             node_box.pack_start(key_box, True, True, 0)
 
+        active = 0
+        node_value = node.get_value()
+        node_type = to_json(type(node_value))
         type_store = Gtk.ListStore(str)
-        for k in json_types:
+
+        value_stack = Gtk.Stack()
+        self.value_stack = value_stack
+
+        for k, entry_class in json_to_entry_field.items():
+            entry = entry_class(to_json)
+            value_stack.add_titled(entry, k, k)
             type_store.append([k])
+            if k == node_type:
+                active = type_store.iter_n_children() - 1
+                entry.set_value(node_value)
+
         type_select = Gtk.ComboBox.new_with_model_and_entry(type_store)
         type_select.set_entry_text_column(0)
-        type_select.set_active(0)
         self.type_select = type_select
         type_box = Gtk.VBox()
         type_box.pack_start(Gtk.Label(label = "Type"), True, True, 0)
         type_box.pack_start(type_select, True, True, 0)
         node_box.pack_start(type_box, True, True, 0)
 
-        value_stack = Gtk.Stack()
-        self.value_stack = value_stack
-        type_select.connect("changed", self.type_changed)
-
-        for k, v in json_to_entry_field.items():
-            entry = v(to_json)
-            value_stack.add_titled(entry, k, k)
 
         value_box = Gtk.VBox()
         value_box.pack_start(Gtk.Label(label = "Value"), True, True, 0)
@@ -94,13 +99,14 @@ class EditValueWindow(Gtk.Dialog):
         node_box.pack_start(value_box, True, True, 0)
 
         area.add(node_box)
+        type_select.connect("changed", self.type_changed)
         self.show_all()
+        type_select.set_active(active)
 
     def type_changed(self, combo):
         tree_iter = combo.get_active_iter()
         model = combo.get_model()
         type = model[tree_iter][0]
-
         self.value_stack.set_visible_child_name(type)
 
     def get_node(self):

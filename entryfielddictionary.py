@@ -7,5 +7,8 @@ class EntryFieldDictionary(Gtk.Label):
 
         self.set_text(convert({}))
 
+    def set_value(self, value):
+        pass
+
     def get_value(self):
         return {}
